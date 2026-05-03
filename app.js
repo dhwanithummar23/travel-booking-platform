@@ -5,7 +5,6 @@ if (process.env.NODE_ENV != "production") {
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
-const MongoStore = require("connect-mongo");
 const path = require("path");
 const methodOverride = require("method-override");
 const ejsMate = require("ejs-mate");
@@ -21,33 +20,20 @@ const listingRouter = require("./routes/listing.js");
 const reviewRouter = require("./routes/review.js");
 const userRouter = require("./routes/user.js");
 
-const MONGO_URL =
-  process.env.ATLASDB_URL || "mongodb://127.0.0.1:27017/wanderlust";
-const DB_NAME = process.env.DB_NAME || "wanderlust";
-const SECRET = process.env.SECRET || "wanderlustsessionsecret";
-let cachedDbConnection = null;
+const MONGO_URL = "mongodb://127.0.0.1:27017/wanderlust";
 
-async function connectDB() {
-  if (cachedDbConnection) return cachedDbConnection;
-
-  cachedDbConnection = mongoose
-    .connect(MONGO_URL, { dbName: DB_NAME })
-    .then((connection) => {
-      console.log("connected to DB");
-      return connection;
-    })
-    .catch((err) => {
-      cachedDbConnection = null;
-      throw err;
-    });
-
-  return cachedDbConnection;
+async function main() {
+  await mongoose.connect(MONGO_URL);
 }
 
-connectDB().catch((err) => {
-  console.log("Database connection failed:");
-  console.log(err.message);
-});
+main()
+  .then(() => {
+    console.log("connected to DB");
+  })
+  .catch((err) => {
+    console.log("Database connection failed:");
+    console.log(err.message);
+  });
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
@@ -56,30 +42,14 @@ app.use(methodOverride("_method"));
 app.engine("ejs", ejsMate);
 app.use(express.static(path.join(__dirname, "/public")));
 
-const store = MongoStore.create({
-  mongoUrl: MONGO_URL,
-  dbName: DB_NAME,
-  crypto: {
-    secret: SECRET,
-  },
-  touchAfter: 24 * 3600,
-});
-
-store.on("error", (err) => {
-  console.log("Session store error:");
-  console.log(err.message);
-});
-
 const sessionOptions = {
-  store,
-  secret: SECRET,
+  secret: process.env.SECRET,
   resave: false,
-  saveUninitialized: false,
+  saveUninitialized: true,
   cookie: {
     expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
     maxAge: 7 * 24 * 60 * 60 * 1000,
     httpOnly: true,
-    sameSite: "lax",
   },
 };
 
@@ -89,15 +59,6 @@ const sessionOptions = {
 
 app.use(session(sessionOptions));
 app.use(flash());
-
-app.use(async (req, res, next) => {
-  try {
-    await connectDB();
-    next();
-  } catch (err) {
-    next(err);
-  }
-});
 
 app.use(passport.initialize());
 app.use(passport.session());
@@ -151,10 +112,6 @@ app.use((err, req, res, next) => {
   res.status(statusCode).render("error.ejs", { message });
 });
 
-if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`server is listening to port ${PORT}`);
-  });
-}
-
-module.exports = app;
+app.listen(PORT, () => {
+  console.log(`server is listening to port ${PORT}`);
+});

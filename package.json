@@ -4,9 +4,8 @@
   },
   "name": "major-project",
   "version": "1.0.0",
-  "main": "app.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -17,7 +16,6 @@
     "@maptiler/leaflet-maptilersdk": "^4.1.1",
     "cloudinary": "^1.41.3",
     "connect-flash": "^0.1.1",
-    "connect-mongo": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.4.2",
     "ejs": "^4.0.1",
